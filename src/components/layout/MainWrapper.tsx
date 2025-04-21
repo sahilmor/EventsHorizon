@@ -2,13 +2,13 @@
 import React, { ReactNode, useState } from "react";
 import { Sidebar, SidebarBody, SidebarLink } from "../ui/sidebar";
 import {
-  IconArrowLeft,
-  IconBrandTabler,
-  IconSettings,
-  IconUserBolt,
+  IconCategory,
+  IconHome,
+  IconTicket,
+  IconUsers,
 } from "@tabler/icons-react";
 import Link from "next/link";
-import { motion } from "motion/react";
+import { motion } from "framer-motion";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
@@ -20,31 +20,31 @@ type MainWrapperProps = {
 const MainWrapper = ({ children } : MainWrapperProps) => {
   const links = [
     {
-      label: "Dashboard",
-      href: "#",
+      label: "Home",
+      href: "/",
       icon: (
-        <IconBrandTabler className="text-white h-5 w-5 shrink-0" />
+        <IconHome className="text-white h-5 w-5 shrink-0" />
       ),
     },
     {
-      label: "Profile",
-      href: "#",
+      label: "Events",
+      href: "/events",
       icon: (
-        <IconUserBolt className="text-white h-5 w-5 shrink-0" />
+        <IconTicket className="text-white h-5 w-5 shrink-0" />
       ),
     },
     {
-      label: "Settings",
-      href: "#",
+      label: "Artists",
+      href: "/artists",
       icon: (
-        <IconSettings className="text-white h-5 w-5 shrink-0" />
+        <IconUsers className="text-white h-5 w-5 shrink-0" />
       ),
     },
     {
-      label: "Logout",
-      href: "#",
+      label: "Categories",
+      href: "/categories",
       icon: (
-        <IconArrowLeft className="text-white h-5 w-5 shrink-0" />
+        <IconCategory className="text-white h-5 w-5 shrink-0" />
       ),
     },
   ];
@@ -69,15 +69,15 @@ const MainWrapper = ({ children } : MainWrapperProps) => {
           <div>
             <SidebarLink
               link={{
-                label: "Manu Arora",
-                href: "#",
+                label: "User Profile",
+                href: "/profile",
                 icon: (
                   <Image
-                    src="https://assets.aceternity.com/manu.png"
+                    src="/default-avatar.png"
                     className="h-7 w-7 shrink-0 rounded-full"
                     width={50}
                     height={50}
-                    alt="Avatar"
+                    alt="User Avatar"
                   />
                 ),
               }}
@@ -85,7 +85,7 @@ const MainWrapper = ({ children } : MainWrapperProps) => {
           </div>
         </SidebarBody>
       </Sidebar>
-      <main className="flex-1 p-4">{children}</main>
+      <main className="flex-1 p-4 overflow-y-auto custom-scrollbar">{children}</main>
     </div>
   );
 }
@@ -98,13 +98,17 @@ export const Logo = () => {
       href="#"
       className="font-normal flex space-x-2 items-center text-sm text-white py-1 relative z-20"
     >
-      <div className="h-5 w-6 bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm shrink-0" />
+      {/* <div className="h-5 w-6 bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm shrink-0" /> */}
+      <div className="text-2xl font-bold text-white relative">
+        <span className="relative -top-1 left-0">E</span>
+        <span className="text-red-500 relative top-1 left-0">H</span>
+      </div>
       <motion.span
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="font-medium text-black-pre"
+        className="font-medium text-black-primary"
       >
-        Acet Labs
+        Event <span className="text-red-500">Horizon</span>
       </motion.span>
     </Link>
   );
@@ -116,7 +120,11 @@ export const LogoIcon = () => {
       href="#"
       className="font-normal flex space-x-2 items-center text-sm text-white py-1 relative z-20"
     >
-      <div className="h-5 w-6 bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm shrink-0" />
+      <div className="text-2xl font-bold text-white relative">
+        <span className="relative -top-1 left-0">E</span>
+        <span className="text-red-500 relative top-1 left-0">H</span>
+      </div>
+      {/* <div className="h-5 w-6 bg-white rounded-br-lg rounded-tr-sm rounded-tl-lg rounded-bl-sm shrink-0" /> */}
     </Link>
   );
 };

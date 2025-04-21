@@ -9,13 +9,14 @@ import {
     SheetTrigger,
 } from "@/components/ui/sheet";
 
-import { ChevronDown, Facebook, Instagram, Twitter } from 'lucide-react';
+import { Facebook, Instagram, Twitter } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import Image from 'next/image';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
-const TrendingEvents = () => {
+const UpcomingEvents = () => {
     const [selectedCard, setSelectedCard] = useState<{
         id: number;
         name: string;
@@ -107,8 +108,11 @@ const TrendingEvents = () => {
 
     return (
         <div>
-            <div className='py-4'>
-                <h2 className="text-2xl font-bold text-white flex items-center gap-2">Trending this week in <span className='text-red-500 flex gap-1 items-center'> NYC <ChevronDown size={20} /></span></h2>
+            <div className='py-4 flex items-center justify-between'>
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2">Upcoming Events</h2>
+                <Link href="/upcomingevents">
+                    <h3 className='text-red-500 cursor-pointer'>See all</h3>
+                </Link>
             </div>
             <div className="grid grid-cols-5 grid-rows-1 gap-4">
                 {cardsData.map((card) => (
@@ -175,6 +179,11 @@ const TrendingEvents = () => {
                                         </a>
                                         </div>
                                     </div>
+                                    <div className='mt-12 text-center'>
+                                        <Link href={`/upcomingevents/${selectedCard?.id}`}>
+                                        <h1 className='text-white/50 text-sm cursor-pointer hover:text-white transition-all duration-300'>View Event</h1>
+                                        </Link>
+                                    </div>
                                 </SheetDescription>
                             </SheetHeader>
                         </SheetContent>
@@ -185,4 +194,4 @@ const TrendingEvents = () => {
     );
 }
 
-export default TrendingEvents;
+export default UpcomingEvents;
