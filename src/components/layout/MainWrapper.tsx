@@ -1,5 +1,5 @@
 "use client";
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import { Sidebar, SidebarBody, SidebarLink } from "../ui/sidebar";
 import {
   IconCategory,
@@ -11,6 +11,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/lib/supabase";
 
 type MainWrapperProps = {
   children: ReactNode;
@@ -18,6 +19,15 @@ type MainWrapperProps = {
 
 
 const MainWrapper = ({ children } : MainWrapperProps) => {
+
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user);
+    });
+  }, []);
+  
   const links = [
     {
       label: "Home",
@@ -69,17 +79,47 @@ const MainWrapper = ({ children } : MainWrapperProps) => {
           <div>
             <SidebarLink
               link={{
-                label: "User Profile",
+                label: user ? user.user_metadata.fullName : "User Profile",
                 href: "/profile",
                 icon: (
-                  <Image
-                    src="/default-avatar.png"
-                    className="h-7 w-7 shrink-0 rounded-full"
-                    width={50}
-                    height={50}
-                    alt="User Avatar"
-                  />
+                  <div className="h-7 w-7 shrink-0 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
+                    {user && user.user_metadata.avatar_url ? (
+                      <div className="relative h-7 w-7">
+                        <Image
+                          src="/default-avatar.svg"
+                          className="h-7 w-7 shrink-0 rounded-full object-cover"
+                          width={50}
+                          height={50}
+                          alt="Default Avatar"
+                        />
+                        <Image
+                          src={user.user_metadata.avatar_url}
+                          className="absolute inset-0 h-7 w-7 shrink-0 rounded-full object-cover opacity-0"
+                          width={50}
+                          height={50}
+                          alt="User Avatar"
+                          onLoad={(e) => {
+                            // If the image loads successfully, make it visible
+                            e.currentTarget.classList.remove('opacity-0');
+                          }}
+                          onError={(e) => {
+                            // If the image fails to load, keep the default avatar visible
+                            console.log('Avatar image failed to load, using default');
+                          }}
+                        />
+                      </div>
+                    ) : (
+                      <Image
+                        src="/default-avatar.svg"
+                        className="h-7 w-7 shrink-0 rounded-full object-cover"
+                        width={50}
+                        height={50}
+                        alt="Default Avatar"
+                      />
+                    )}
+                  </div>
                 ),
+                className: "text-red-500",
               }}
             />
           </div>

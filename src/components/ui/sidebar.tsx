@@ -9,6 +9,7 @@ interface Links {
   label: string;
   href: string;
   icon: React.JSX.Element | React.ReactNode;
+  className?: string;
 }
 
 interface SidebarContextProps {
@@ -181,7 +182,10 @@ export const SidebarLink = ({
           display: animate ? (open ? "inline-block" : "none") : "inline-block",
           opacity: animate ? (open ? 1 : 0) : 1,
         }}
-        className="text-white text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0"
+        className={cn(
+          "text-sm group-hover/sidebar:translate-x-1 transition duration-150 whitespace-pre inline-block !p-0 !m-0",
+          link.className
+        )}
       >
         {link.label}
       </motion.span>

@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import React from 'react';
-import { IconCalendar, IconMapPin, IconUsers, IconTicket, IconShare, IconHeart } from '@tabler/icons-react';
+import { IconCalendar, IconMapPin, IconUsers, IconTicket, IconShare, IconHeart, IconList } from '@tabler/icons-react';
 import { Button } from '@/components/ui/button';
 
 // interface Params {
@@ -146,8 +146,12 @@ const EventDetails = () => {
                   <span>Share</span>
                 </Button>
                 <Button className="flex items-center gap-2 text-white/80 hover:text-white transition-colors">
+                  <IconList size={20} />
+                  <span>Add to Wishlist</span>
+                </Button>
+                <Button className="flex items-center gap-2 text-white/80 hover:text-white transition-colors">
                   <IconHeart size={20} />
-                  <span>Save</span>
+                  <span>Like</span>
                 </Button>
               </div>
             </div>
