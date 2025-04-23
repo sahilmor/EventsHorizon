@@ -21,45 +21,24 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { IconHeart } from "@tabler/icons-react";
+import { IconBrand4chan, IconHeart, IconList } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useUser } from "@/context/UserContext";
-import { wishlistService, WishlistEvent } from '@/services/wishlistService';
+import { supabase } from '@/lib/supabase';
+import { toast } from "sonner";
 
-// Mock booked events
-const bookedEvents = [
-  {
-    id: "b1",
-    title: "Pop Stars Live",
-    date: "July 20, 2023",
-    location: "Barclays Center, Brooklyn",
-    image: "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?q=80&w=2070&auto=format&fit=crop",
-    price: "$95",
-    status: "Upcoming"
-  },
-  {
-    id: "b2",
-    title: "Classical Symphony",
-    date: "August 15, 2023",
-    location: "Carnegie Hall, NYC",
-    image: "https://images.unsplash.com/photo-1507838153414-b4b713384a76?q=80&w=2070&auto=format&fit=crop",
-    price: "$85",
-    status: "Upcoming"
-  },
-  {
-    id: "b3",
-    title: "Tech Conference 2023",
-    date: "June 5, 2023",
-    location: "Javits Center, NYC",
-    image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?q=80&w=2070&auto=format&fit=crop",
-    price: "$250",
-    status: "Past"
-  }
-];
+interface Event {
+  id: string;
+  title: string;
+  date: string;
+  location: string;
+  price: string;
+  image_url: string;
+}
 
 export default function UserPage() {
   const { user, loading, setLoading, logout, updateProfile } = useUser();
@@ -73,25 +52,52 @@ export default function UserPage() {
   const [location, setLocation] = useState('');
   const [bio, setBio] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [wishlistEvents, setWishlistEvents] = useState<WishlistEvent[]>([]);
+  const [wishlistEvents, setWishlistEvents] = useState<Event[]>([]);
+  const [bookedEvents, setBookedEvents] = useState<Event[]>([]);
+  const [likedEvents, setLikedEvents] = useState<Event[]>([]);
   const [isLoadingWishlist, setIsLoadingWishlist] = useState(true);
+  const [isLoadingBooked, setIsLoadingBooked] = useState(true);
+  const [isLoadingLiked, setIsLoadingLiked] = useState(true);
 
   useEffect(() => {
     if (user) {
-      setFullName(user.user_metadata.full_name || '');
+      console.log(user);
+      setFullName(user.full_name || '');
+      setUsername(user.username || '');
       setEmail(user.email || '');
-      setPhone(user.user_metadata.phone || '');
-      setLocation(user.user_metadata.location || '');
-      setBio(user.user_metadata.bio || '');
+      setPhone(user.phone || '');
+      setLocation(user.location || '');
+      setBio(user.bio || ''); 
     }
   }, [user]);
+  
 
   useEffect(() => {
-    const fetchWishlist = async () => {
+    const fetchWishlistEvents = async () => {
       if (user) {
         try {
-          const events = await wishlistService.getUserWishlist(user.id);
-          setWishlistEvents(events);
+          setIsLoadingWishlist(true);
+          // Get the user's wishlist array from the users table
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('wishlisted_events')
+            .eq('id', user.id)
+            .single();
+
+          if (userError) throw userError;
+
+          if (userData?.wishlisted_events?.length > 0) {
+            // Fetch the event details for each wishlisted event
+            const { data: events, error: eventsError } = await supabase
+              .from('events')
+              .select('*')
+              .in('id', userData.wishlisted_events);
+
+            if (eventsError) throw eventsError;
+            setWishlistEvents(events || []);
+          } else {
+            setWishlistEvents([]);
+          }
         } catch (error) {
           console.error('Error fetching wishlist:', error);
         } finally {
@@ -100,7 +106,81 @@ export default function UserPage() {
       }
     };
 
-    fetchWishlist();
+    fetchWishlistEvents();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchBookedEvents = async () => {
+      if (user) {
+        try {
+          setIsLoadingBooked(true);
+          // Get the user's wishlist array from the users table
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('booked_events')
+            .eq('id', user.id)
+            .single();
+
+          if (userError) throw userError;
+
+          if (userData?.booked_events?.length > 0) {
+            // Fetch the event details for each wishlisted event
+            const { data: events, error: eventsError } = await supabase
+              .from('events')
+              .select('*')
+              .in('id', userData.booked_events);
+
+            if (eventsError) throw eventsError;
+            setBookedEvents(events || []);
+          } else {
+            setBookedEvents([]);
+          }
+        } catch (error) {
+          console.error('Error fetching booked events:', error);
+        } finally {
+          setIsLoadingBooked(false);
+        }
+      }
+    };
+
+    fetchBookedEvents();
+  }, [user]);
+
+  useEffect(() => {
+    const fetchLikedEvents = async () => {
+      if (user) {
+        try {
+          setIsLoadingLiked(true);
+          // Get the user's wishlist array from the users table
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('liked_events')
+            .eq('id', user.id)
+            .single();
+
+          if (userError) throw userError;
+
+          if (userData?.liked_events?.length > 0) {
+            // Fetch the event details for each wishlisted event
+            const { data: events, error: eventsError } = await supabase
+              .from('events')
+              .select('*')
+              .in('id', userData.liked_events);
+
+            if (eventsError) throw eventsError;
+            setLikedEvents(events || []);
+          } else {
+            setLikedEvents([]);
+          }
+        } catch (error) {
+          console.error('Error fetching liked events:', error);
+        } finally {
+          setIsLoadingLiked(false);
+        }
+      }
+    };
+
+    fetchLikedEvents();
   }, [user]);
 
   const handleUpdateProfile = async () => {
@@ -110,7 +190,8 @@ export default function UserPage() {
     
     const success = await updateProfile(
       {
-        full_name: fullName,
+        fullName,
+        username,
         phone,
         location,
         bio
@@ -121,6 +202,15 @@ export default function UserPage() {
     setLoading(false);
     if (success) {
       setIsDialogOpen(false);
+      setFullName('');
+      setUsername('');
+      setEmail('');
+      setPhone('');
+      setLocation('');
+      setBio('');
+      setAvatarFile(null);
+      toast.success('Profile updated successfully!');
+      window.location.reload();
     }
   };
 
@@ -141,20 +231,20 @@ export default function UserPage() {
               <Avatar className="h-24 w-24 mb-4">
                 <AvatarImage
                   className="object-cover"
-                  src={user.user_metadata.avatar_url || '/default-avatar.svg'}
-                  alt={user.user_metadata.full_name}
+                  src={user.avatar_url || '/default-avatar.svg'}
+                  alt={user.full_name}
                   width={1000}
                   height={1000}
                 />
                 <AvatarFallback>
-                  {user.user_metadata.full_name
-                    ? user.user_metadata.full_name.split(' ').map((n: string) => n[0]).join('')
+                  {user.full_name
+                    ? user.full_name.split(' ').map((n: string) => n[0]).join('')
                     : 'U'}
                 </AvatarFallback>
               </Avatar>
-              <h1 className="text-2xl font-bold text-white">{user.user_metadata.full_name}</h1>
-              <p className="text-gray-300">@{user.user_metadata.full_name}</p>
-              <p className="text-gray-300 text-sm mt-2">{user.user_metadata.bio}</p>
+              <h1 className="text-2xl font-bold text-white">{user.full_name}</h1>
+              <p className="text-gray-300">@{user.username || user.full_name}</p>
+              <p className="text-gray-300 text-sm mt-2">{user.bio}</p>
               <div className="flex gap-4 mt-4">
                 <Button
                   variant="outline"
@@ -175,15 +265,15 @@ export default function UserPage() {
             <div className="space-y-4">
               <div className="flex items-center">
                 <Mail className="h-5 w-5 text-red-500 mr-3" />
-                <span className="text-gray-300">{user.user_metadata.email}</span>
+                <span className="text-gray-300">{user.email}</span>
               </div>
               <div className="flex items-center">
                 <Phone className="h-5 w-5 text-red-500 mr-3" />
-                <span className="text-gray-300">{user.user_metadata.phone}</span>
+                <span className="text-gray-300">{user.phone}</span>
               </div>
               <div className="flex items-center">
                 <MapPin className="h-5 w-5 text-red-500 mr-3" />
-                <span className="text-gray-300">{user.user_metadata.location}</span>
+                <span className="text-gray-300">{user.location}</span>
               </div>
               <div className="flex items-center">
                 <Calendar className="h-5 w-5 text-red-500 mr-3" />
@@ -195,160 +285,174 @@ export default function UserPage() {
       </div>
 
       {/* Tabs for different sections */}
-      <Tabs defaultValue="wishlist" className="w-full">
+      <Tabs defaultValue={user?.role === 'creator' ? "settings" : "wishlist"} className="w-full">
         <TabsList className="bg-black border-none mb-6">
-          <TabsTrigger value="wishlist" className="data-[state=active]:bg-red-500 data-[state=active]:text-white text-gray-300">
-            <Heart className="h-4 w-4 mr-2" />
-            Wishlist ({user.wishlistCount})
-          </TabsTrigger>
-          <TabsTrigger value="booked" className="data-[state=active]:bg-red-500 data-[state=active]:text-white text-gray-300">
-            <Calendar className="h-4 w-4 mr-2" />
-            Booked Events ({user.bookedCount})
-          </TabsTrigger>
+          {user?.role !== 'creator' && (
+            <>
+              <TabsTrigger value="wishlist" className="data-[state=active]:bg-red-500 data-[state=active]:text-white text-gray-300">
+                <IconList className="h-4 w-4 mr-2" />
+                Wishlist ({wishlistEvents.length})
+              </TabsTrigger>
+              <TabsTrigger value="booked" className="data-[state=active]:bg-red-500 data-[state=active]:text-white text-gray-300">
+                <Calendar className="h-4 w-4 mr-2" />
+                Booked Events ({bookedEvents.length})
+              </TabsTrigger>
+              <TabsTrigger value="liked" className="data-[state=active]:bg-red-500 data-[state=active]:text-white text-gray-300">
+                <Heart className="h-4 w-4 mr-2" />
+                Liked Events ({likedEvents.length})
+              </TabsTrigger>
+            </>
+          )}
           <TabsTrigger value="settings" className="data-[state=active]:bg-red-500 data-[state=active]:text-white text-gray-300">
             <Settings className="h-4 w-4 mr-2" />
             Settings
           </TabsTrigger>
         </TabsList>
 
-        {/* Wishlist Tab */}
-        <TabsContent value="wishlist">
-        {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"> */}
-        {isLoadingWishlist ?
-        <div className="flex justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-        </div>
-        :
-        wishlistEvents.length === 0 ?
-        <div className="text-center py-8 w-full">
-          <p className="text-gray-500">No events in your wishlist yet.</p>
-        </div>
-        :
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {wishlistEvents.map((event) => (
-          <Link href={`/events/${event.id}`} key={event.id}>
-            <Card className='bg-black border-none cursor-pointer'>
-                  <CardHeader className="relative">
-                    <Image src={event.event.image_url} alt="Event Image" width={100} height={100} className='object-cover brightness-75' />
-                    <div className="absolute top-2 right-6">
-                      <IconHeart className="h-4 w-4 text-red-500" />
-                    </div>
-                  </CardHeader>
-                  <CardContent className='p-4 space-y-4'>
-                    <h3 className="text-lg font-semibold text-white mb-1">{event.event.title}</h3>
-                    <div className="flex items-center text-gray-300 text-sm mb-2">
-                      <Calendar className="h-4 w-4 mr-1 text-red-500" />
-                      <span>{event.event.date}</span>
-                    </div>
-                    <div className="flex items-center text-gray-300 text-sm mb-2">
-                      <MapPin className="h-4 w-4 mr-1 text-red-500" />
-                      <span>{event.event.location}</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-red-500 font-semibold">{event.event.price}</span>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white w-full hover:text-white">
-                        Book Now
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-              ))}
-          </div>
-          }
-
-          {/* <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            <div className="px-4 py-6 sm:px-0">
-              <div className="bg-white shadow rounded-lg p-6">
-                <h2 className="text-2xl font-bold mb-4">My Wishlist</h2>
-                
-                {isLoadingWishlist ? (
-                  <div className="flex justify-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-                  </div>
-                ) : wishlistEvents.length === 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">No events in your wishlist yet.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {wishlistEvents.map((wishlistEvent) => (
-                      <Card key={wishlistEvent.id} className="overflow-hidden">
-                        <div className="relative h-48">
-                          <img
-                            src={wishlistEvent.event.image_url}
-                            alt={wishlistEvent.event.title}
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        <CardContent className="p-4">
-                          <h3 className="text-lg font-semibold mb-2">{wishlistEvent.event.title}</h3>
-                          <p className="text-gray-600 text-sm mb-2">{wishlistEvent.event.description}</p>
-                          <div className="flex justify-between items-center">
-                            <span className="text-gray-500 text-sm">
-                              {new Date(wishlistEvent.event.date).toLocaleDateString()}
-                            </span>
-                            <span className="text-gray-500 text-sm">{wishlistEvent.event.location}</span>
+        {user?.role !== 'creator' && (
+          <>
+            {/* Wishlist Tab */}
+            <TabsContent value="wishlist">
+              {isLoadingWishlist ? (
+                <div className="flex justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                </div>
+              ) : wishlistEvents.length === 0 ? (
+                <div className="text-center py-8 w-full">
+                  <p className="text-gray-500">No events in your wishlist yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {wishlistEvents.map((event) => (
+                    <Link href={`/events/${event.id}`} key={event.id}>
+                      <Card className='bg-black border-none cursor-pointer'>
+                        <CardHeader className="relative">
+                          <Image src={event.image_url} alt="Event Image" width={100} height={100} className='object-cover brightness-75' />
+                          <div className="absolute top-2 right-6">
+                            <IconHeart className="h-4 w-4 text-red-500" />
                           </div>
-                          <div className="mt-4 flex justify-between items-center">
-                            <span className="text-lg font-bold">${wishlistEvent.event.price}</span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => wishlistService.removeFromWishlist(user!.id, wishlistEvent.event_id)}
-                              className="text-red-600 hover:text-red-800"
-                            >
-                              Remove from Wishlist
+                        </CardHeader>
+                        <CardContent className='p-4 space-y-4'>
+                          <h3 className="text-lg font-semibold text-white mb-1">{event.title}</h3>
+                          <div className="flex items-center text-gray-300 text-sm mb-2">
+                            <Calendar className="h-4 w-4 mr-1 text-red-500" />
+                            <span>{event.date}</span>
+                          </div>
+                          <div className="flex items-center text-gray-300 text-sm mb-2">
+                            <MapPin className="h-4 w-4 mr-1 text-red-500" />
+                            <span>{event.location}</span>
+                          </div>
+                          <div className="flex justify-between items-center mt-2">
+                            <span className="text-red-500 font-semibold">{event.price}</span>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white w-full hover:text-white">
+                              Book Now
                             </Button>
                           </div>
                         </CardContent>
                       </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div> */}
-        </TabsContent>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
 
-        {/* Booked Events Tab */}
-        <TabsContent value="booked">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {bookedEvents.map((event) => (
-              <Link href={`/events/${event.id}`} key={event.id}>
-                <Card className='bg-black border-none cursor-pointer'>
-                  <CardHeader className="relative">
-                    <Image src={event.image} alt="Event Image" width={100} height={100} className='object-cover brightness-75' />
-                    <div className="absolute top-2 right-6">
-                      <IconHeart className="h-4 w-4 text-red-500" />
-                    </div>
-                  </CardHeader>
-                  <CardContent className='p-4 space-y-4'>
-                    <h3 className="text-lg font-semibold text-white mb-1">{event.title}</h3>
-                    <div className="flex items-center text-gray-300 text-sm mb-2">
-                      <Calendar className="h-4 w-4 mr-1 text-red-500" />
-                      <span>{event.date}</span>
-                    </div>
-                    <div className="flex items-center text-gray-300 text-sm mb-2">
-                      <MapPin className="h-4 w-4 mr-1 text-red-500" />
-                      <span>{event.location}</span>
-                    </div>
-                    <div className="flex justify-between items-center mt-2">
-                      <span className="text-red-500 font-semibold">{event.price}</span>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white w-full hover:text-white">
-                        Book Now
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </TabsContent>
+            {/* Booked Events Tab */}
+            <TabsContent value="booked">
+              {isLoadingBooked ? (
+                <div className="flex justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                </div>
+              ) : bookedEvents.length === 0 ? (
+                <div className="text-center py-8 w-full">
+                  <p className="text-gray-500">No events in your booked list yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {bookedEvents.map((event) => (
+                    <Link href={`/events/${event.id}`} key={event.id}>
+                      <Card className='bg-black border-none cursor-pointer'>
+                        <CardHeader className="relative">
+                          <Image src={event.image_url} alt="Event Image" width={100} height={100} className='object-cover brightness-75' />
+                          <div className="absolute top-2 right-6">
+                            <IconHeart className="h-4 w-4 text-red-500" />
+                          </div>
+                        </CardHeader>
+                        <CardContent className='p-4 space-y-4'>
+                          <h3 className="text-lg font-semibold text-white mb-1">{event.title}</h3>
+                          <div className="flex items-center text-gray-300 text-sm mb-2">
+                            <Calendar className="h-4 w-4 mr-1 text-red-500" />
+                            <span>{event.date}</span>
+                          </div>
+                          <div className="flex items-center text-gray-300 text-sm mb-2">
+                            <MapPin className="h-4 w-4 mr-1 text-red-500" />
+                            <span>{event.location}</span>
+                          </div>
+                          <div className="flex justify-between items-center mt-2">
+                            <span className="text-red-500 font-semibold">{event.price}</span>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white w-full hover:text-white">
+                              Book Now
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Liked Events Tab */}
+            <TabsContent value="liked">
+              {isLoadingLiked ? (
+                <div className="flex justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                </div>
+              ) : likedEvents.length === 0 ? (
+                <div className="text-center py-8 w-full">
+                  <p className="text-gray-500">No events in your liked list yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {likedEvents.map((event) => (
+                    <Link href={`/events/${event.id}`} key={event.id}>
+                      <Card className='bg-black border-none cursor-pointer'>
+                        <CardHeader className="relative">
+                          <Image src={event.image_url} alt="Event Image" width={100} height={100} className='object-cover brightness-75' />
+                          <div className="absolute top-2 right-6">
+                            <IconHeart className="h-4 w-4 text-red-500" />
+                          </div>
+                        </CardHeader>
+                        <CardContent className='p-4 space-y-4'>
+                          <h3 className="text-lg font-semibold text-white mb-1">{event.title}</h3>
+                          <div className="flex items-center text-gray-300 text-sm mb-2">
+                            <Calendar className="h-4 w-4 mr-1 text-red-500" />
+                            <span>{event.date}</span>
+                          </div>
+                          <div className="flex items-center text-gray-300 text-sm mb-2">
+                            <MapPin className="h-4 w-4 mr-1 text-red-500" />
+                            <span>{event.location}</span>
+                          </div>
+                          <div className="flex justify-between items-center mt-2">
+                            <span className="text-red-500 font-semibold">{event.price}</span>
+                          </div>
+                          <div className="flex justify-between gap-2">
+                            <Button size="sm" className="bg-red-500 hover:bg-red-600 text-white w-full hover:text-white">
+                              Book Now
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </>
+        )}
 
         {/* Settings Tab */}
         <TabsContent value="settings">
@@ -443,6 +547,27 @@ export default function UserPage() {
                   </div>
                   <ChevronRight className="h-5 w-5 text-gray-300" />
                 </div>
+                
+                <Link href="/profile/proffesional-account-setup">
+                <div className="flex items-center justify-between p-4 border border-gray-800 rounded-lg hover:bg-gray-800/50 cursor-pointer">
+                  <div className="flex items-center">
+                    <IconBrand4chan className="h-5 w-5 text-red-500 mr-3" />
+                    <div>
+                      {user?.role === 'creator' ? (
+                        <h3 className="text-white font-medium">Organization / User Account</h3>
+                      ) : (
+                        <h3 className="text-white font-medium">Organization / Creator Account</h3>
+                      )}
+                      {user?.role === 'creator' ? (
+                        <p className="text-gray-300 text-sm">Manage your organization or creator account</p>
+                      ) : (
+                        <p className="text-gray-300 text-sm">Manage your organization or user account</p>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="h-5 w-5 text-gray-300" />
+                </div>
+                </Link>
               </div>
             </CardContent>
           </Card>

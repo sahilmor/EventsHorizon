@@ -4,22 +4,19 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { supabase } from '@/lib/supabase';
 import { useRouter } from 'next/navigation';
 import { WishlistEvent } from '@/services/wishlistService';
-
-export interface UserMetadata {
-  full_name?: string;
-  username?: string;
-  email?: string;
-  phone?: string;
-  location?: string;
-  bio?: string;
-  avatar_url?: string;
-}
+import { toast } from 'sonner';
 
 export interface User {
   id: string;
   email?: string;
-  user_metadata: UserMetadata;
   created_at: string;
+  full_name?: string;
+  username?: string;
+  phone?: string;
+  location?: string;
+  bio?: string;
+  avatar_url?: string;
+  role?: string;
   wishlistCount?: number;
   bookedCount?: number;
 }
@@ -31,6 +28,7 @@ export interface ProfileFormState {
   phone: string;
   location: string;
   bio: string;
+  role?: string;
 }
 
 interface UserContextType {
@@ -39,19 +37,18 @@ interface UserContextType {
   updateUser: (userData: User | null) => void;
   setLoading: (loading: boolean) => void;
   logout: () => Promise<void>;
-  updateProfile: (metadata: Partial<UserMetadata>, avatarFile?: File | null) => Promise<boolean>;
-  // Profile form state
+  updateProfile: (
+    profileData: Omit<ProfileFormState, "email">,
+    avatarFile?: File | null
+  ) => Promise<boolean>;
   profileForm: ProfileFormState;
   setProfileForm: (form: ProfileFormState) => void;
-  // Wishlist state
   wishlistEvents: WishlistEvent[];
   setWishlistEvents: (events: WishlistEvent[]) => void;
   isLoadingWishlist: boolean;
   setIsLoadingWishlist: (loading: boolean) => void;
-  // Dialog state
   isDialogOpen: boolean;
   setIsDialogOpen: (open: boolean) => void;
-  // Profile update state
   isUpdatingProfile: boolean;
   setIsUpdatingProfile: (updating: boolean) => void;
 }
@@ -71,51 +68,57 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
-  
-  // Profile form state
+
   const [profileForm, setProfileForm] = useState<ProfileFormState>(defaultProfileForm);
-  
-  // Wishlist state
   const [wishlistEvents, setWishlistEvents] = useState<WishlistEvent[]>([]);
   const [isLoadingWishlist, setIsLoadingWishlist] = useState(true);
-  
-  // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
-  // Profile update state
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const { data, error } = await supabase.auth.getUser();
-        if (error) {
-          console.error('Error fetching user:', error.message);
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError || !authData.user) {
+          console.error('Error fetching auth user:', authError?.message);
           setUser(null);
-        } else if (data.user) {
-          // Map Supabase user to our User type
-          const userData: User = {
-            id: data.user.id,
-            email: data.user.email,
-            user_metadata: data.user.user_metadata || {},
-            created_at: data.user.created_at,
-            wishlistCount: 0,
-            bookedCount: 0
-          };
-          setUser(userData);
-          
-          // Update profile form with user data
-          setProfileForm({
-            fullName: userData.user_metadata.full_name || '',
-            username: userData.user_metadata.username || '',
-            email: userData.email || '',
-            phone: userData.user_metadata.phone || '',
-            location: userData.user_metadata.location || '',
-            bio: userData.user_metadata.bio || '',
-          });
+          return;
         }
+
+        const userId = authData.user.id;
+
+        const { data: customUser, error: userError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', userId)
+          .single();
+
+        if (userError) {
+          console.error('Error fetching user from users table:', userError.message);
+          setUser(null);
+          return;
+        }
+
+        const fullUser: User = {
+          ...customUser,
+          email: authData.user.email,
+          wishlistCount: 0,
+          bookedCount: 0
+        };
+
+        setUser(fullUser);
+
+        setProfileForm({
+          fullName: fullUser.full_name || '',
+          username: fullUser.username || '',
+          email: fullUser.email || '',
+          phone: fullUser.phone || '',
+          location: fullUser.location || '',
+          bio: fullUser.bio || '',
+        });
+
       } catch (error) {
-        console.error('Error in loadUser:', error);
+        console.error('Error loading user:', error);
         setUser(null);
       } finally {
         setLoading(false);
@@ -140,109 +143,65 @@ export function UserProvider({ children }: { children: ReactNode }) {
   };
 
   const updateProfile = async (
-    metadata: Partial<UserMetadata>,
+    profileData: Omit<ProfileFormState, "email">,
     avatarFile?: File | null
   ): Promise<boolean> => {
     if (!user) return false;
 
     setIsUpdatingProfile(true);
     try {
-      // Update user metadata
-      const { error: metadataError } = await supabase.auth.updateUser({
-        data: metadata
-      });
+      let avatar_url = '';
 
-      if (metadataError) {
-        console.error('Error updating user metadata:', metadataError.message);
-        setIsUpdatingProfile(false);
-        return false;
-      }
-
-      // Handle avatar upload if provided
       if (avatarFile) {
-        try {
-          const fileExt = avatarFile.name.split('.').pop();
-          const fileName = `${Date.now()}.${fileExt}`;
-          const filePath = `${user.id}/${fileName}`;
+        const fileExt = avatarFile.name.split('.').pop();
+        const fileName = `${Date.now()}.${fileExt}`;
+        const filePath = `${user.id}/${fileName}`;
 
-          // Upload new avatar
-          const { data: avatarData, error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(filePath, avatarFile, {
-              cacheControl: "3600",
-              upsert: true
-            });
-
-          if (uploadError) {
-            console.error('Error uploading avatar:', uploadError.message);
-            setIsUpdatingProfile(false);
-            return false;
-          }
-
-          const { data: publicUrlData } = supabase
-            .storage
-            .from('avatars')
-            .getPublicUrl(filePath);
-
-          // Update user with new avatar URL
-          const { error: avatarUpdateError } = await supabase.auth.updateUser({
-            data: {
-              avatar_url: publicUrlData.publicUrl
-            }
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, avatarFile, {
+            cacheControl: "3600",
+            upsert: true
           });
 
-          if (avatarUpdateError) {
-            console.error('Error updating avatar URL:', avatarUpdateError.message);
-            setIsUpdatingProfile(false);
-            return false;
-          }
-        } catch (error) {
-          console.error('Unexpected error during avatar update:', error);
+        if (uploadError) {
+          console.error('Avatar upload error:', uploadError.message);
           setIsUpdatingProfile(false);
           return false;
         }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+
+        avatar_url = publicUrlData.publicUrl;
       }
 
-      // Refetch updated user
-      const { data: refreshedUser, error: refreshError } = await supabase.auth.getUser();
-      
-      if (refreshError) {
-        console.error('Error refreshing user:', refreshError.message);
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({
+          full_name: profileData.fullName,
+          username: profileData.username,
+          phone: profileData.phone,
+          location: profileData.location,
+          bio: profileData.bio,
+          ...(profileData.role && { role: profileData.role }),
+          ...(avatar_url && { avatar_url })
+        })
+        .eq('id', user.id);
+
+      if (updateError) {
+        console.error('User update error:', updateError.message);
         setIsUpdatingProfile(false);
         return false;
       }
-      
-      if (!refreshedUser.user) {
-        setIsUpdatingProfile(false);
-        return false;
-      }
-      
-      // Map Supabase user to our User type
-      const updatedUser: User = {
-        id: refreshedUser.user.id,
-        email: refreshedUser.user.email,
-        user_metadata: refreshedUser.user.user_metadata || {},
-        created_at: refreshedUser.user.created_at,
-        wishlistCount: 0, // Default values
-        bookedCount: 0
-      };
-      
-      setUser(updatedUser);
-      
-      // Update profile form with refreshed user data
-      setProfileForm({
-        fullName: updatedUser.user_metadata.full_name || '',
-        username: updatedUser.user_metadata.username || '',
-        email: updatedUser.email || '',
-        phone: updatedUser.user_metadata.phone || '',
-        location: updatedUser.user_metadata.location || '',
-        bio: updatedUser.user_metadata.bio || '',
-      });
-      
+
+      toast.success('Profile updated!');
       setIsUpdatingProfile(false);
       return true;
-    } catch (error) {
-      console.error('Unexpected error during profile update:', error);
+
+    } catch (err) {
+      console.error('Unexpected update error:', err);
       setIsUpdatingProfile(false);
       return false;
     }
@@ -280,4 +239,4 @@ export function useUser() {
     throw new Error('useUser must be used within a UserProvider');
   }
   return context;
-} 
+}

@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+import { useUser } from "@/context/UserContext";
 
 type MainWrapperProps = {
   children: ReactNode;
@@ -20,13 +21,7 @@ type MainWrapperProps = {
 
 const MainWrapper = ({ children } : MainWrapperProps) => {
 
-  const [user, setUser] = useState<any>(null)
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-    });
-  }, []);
+  const { user } = useUser();
   
   const links = [
     {
@@ -79,11 +74,11 @@ const MainWrapper = ({ children } : MainWrapperProps) => {
           <div>
             <SidebarLink
               link={{
-                label: user ? user.user_metadata.fullName : "User Profile",
+                label: user?.full_name || "User Profile",
                 href: "/profile",
                 icon: (
                   <div className="h-7 w-7 shrink-0 rounded-full overflow-hidden bg-gray-800 flex items-center justify-center">
-                    {user && user.user_metadata.avatar_url ? (
+                    {user && user.avatar_url ? (
                       <div className="relative h-7 w-7">
                         <Image
                           src="/default-avatar.svg"
@@ -93,7 +88,7 @@ const MainWrapper = ({ children } : MainWrapperProps) => {
                           alt="Default Avatar"
                         />
                         <Image
-                          src={user.user_metadata.avatar_url}
+                          src={user.avatar_url}
                           className="absolute inset-0 h-7 w-7 shrink-0 rounded-full object-cover opacity-0"
                           width={50}
                           height={50}
