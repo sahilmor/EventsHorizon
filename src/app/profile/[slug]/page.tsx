@@ -26,11 +26,19 @@ const RegisterPage = () => {
   const [bio, setBio] = useState('');
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
+  const [organizationName, setOrganizationName] = useState('');
+  const [website, setWebsite] = useState('');
+  const [organizationEmail, setOrganizationEmail] = useState('');
+  const [organizationPhone, setOrganizationPhone] = useState('');
+  const [organizationAddress, setOrganizationAddress] = useState('');
+  const [organizationDescription, setOrganizationDescription] = useState('');
+  const [organizationLogoFile, setOrganizationLogoFile] = useState<File | null>(null);
+
   const handleCreatorRegister = async () => {
     if (!user) return;
 
     setIsSubmitting(true);
-    
+
     const success = await updateProfile(
       {
         fullName,
@@ -51,11 +59,36 @@ const RegisterPage = () => {
     }
   };
 
+  const handleOrganizationRegister = async () => {
+    if (!user) return;
+
+    setIsSubmitting(true);
+
+    const success = await updateProfile(
+      {
+        fullName: organizationName,
+        username: organizationName.toLowerCase().replace(/\s+/g, '_'),
+        phone: organizationPhone,
+        location: organizationAddress,
+        bio: organizationDescription,
+        role: 'organization'
+      },
+      organizationLogoFile
+    );
+
+    setIsSubmitting(false);
+
+    if (success) {
+      toast.success('Profile updated successfully!');
+      router.push('/profile');
+    }
+  };
+
   const handleUserRegister = async () => {
     if (!user) return;
 
     setIsSubmitting(true);
-    
+
     const success = await updateProfile(
       {
         fullName,
@@ -68,7 +101,7 @@ const RegisterPage = () => {
       avatarFile
     );
 
-    
+
     if (success) {
       setIsSubmitting(false);
       setFullName('');
@@ -95,19 +128,19 @@ const RegisterPage = () => {
         <CardContent>
           <Tabs defaultValue="creator" className="w-full" onValueChange={setActiveTab}>
             <TabsList className="bg-black border-none mb-6 grid w-full grid-cols-2">
-              <TabsTrigger 
-                value="creator" 
+              <TabsTrigger
+                value="creator"
                 className="data-[state=active]:bg-red-500 data-[state=active]:text-white text-gray-300"
               >
                 <UserCircle2 className="h-4 w-4 mr-2" />
                 {user?.role === 'creator' ? 'User' : 'Creator Account'}
               </TabsTrigger>
-              <TabsTrigger 
-                value="organization" 
+              <TabsTrigger
+                value="organization"
                 className="data-[state=active]:bg-red-500 data-[state=active]:text-white text-gray-300"
               >
                 <Building2 className="h-4 w-4 mr-2" />
-                Organization Account
+                {user?.role === 'organization' ? 'User' : 'Organization Account'}
               </TabsTrigger>
             </TabsList>
 
@@ -117,8 +150,8 @@ const RegisterPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-white">Full Name</Label>
-                    <Input 
-                      type="text" 
+                    <Input
+                      type="text"
                       name="fullName"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
@@ -129,8 +162,8 @@ const RegisterPage = () => {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-white">Username</Label>
-                    <Input 
-                      type="text" 
+                    <Input
+                      type="text"
                       name="username"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
@@ -144,8 +177,8 @@ const RegisterPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label className="text-white">Email</Label>
-                    <Input 
-                      type="email" 
+                    <Input
+                      type="email"
                       name="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
@@ -156,8 +189,8 @@ const RegisterPage = () => {
                   </div>
                   <div className="space-y-2">
                     <Label className="text-white">Phone</Label>
-                    <Input 
-                      type="tel" 
+                    <Input
+                      type="tel"
                       name="phone"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
@@ -170,8 +203,8 @@ const RegisterPage = () => {
 
                 <div className="space-y-2">
                   <Label className="text-white">Location</Label>
-                  <Input 
-                    type="text" 
+                  <Input
+                    type="text"
                     name="location"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
@@ -183,7 +216,7 @@ const RegisterPage = () => {
 
                 <div className="space-y-2">
                   <Label className="text-white">Bio</Label>
-                  <Textarea 
+                  <Textarea
                     name="bio"
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
@@ -192,7 +225,7 @@ const RegisterPage = () => {
                     rows={4}
                     required
                   />
-                </div>  
+                </div>
 
                 <div className="space-y-2">
                   <Label className="text-white">Profile Picture</Label>
@@ -203,9 +236,9 @@ const RegisterPage = () => {
                         <p className="mb-2 text-sm text-gray-400">Click to upload or drag and drop</p>
                         <p className="text-xs text-gray-400">PNG, JPG or JPEG</p>
                       </div>
-                      <input 
-                        type="file" 
-                        className="hidden" 
+                      <input
+                        type="file"
+                        className="hidden"
                         accept="image/*"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
@@ -218,8 +251,8 @@ const RegisterPage = () => {
                   </div>
                 </div>
 
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full bg-red-500 hover:bg-red-600 text-white"
                   disabled={isSubmitting}
                   onClick={user?.role === 'creator' ? handleUserRegister : handleCreatorRegister}
@@ -231,84 +264,251 @@ const RegisterPage = () => {
 
             {/* Organization Registration Form */}
             <TabsContent value="organization">
-              <form className="space-y-6">
+              <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="text-white">Organization Name</Label>
-                    <Input 
-                      type="text" 
-                      placeholder="Enter organization name"
-                      className="bg-gray-900 border-gray-800 text-white"
-                    />
+                    {user?.role === 'organization' ? (
+                      <>
+                        <Label className="text-white">Full Name</Label>
+                        <Input
+                          type="text"
+                          name="fullName"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="Enter your full name"
+                          className="bg-gray-900 border-gray-800 text-white"
+                        />
+                      </>
+                    ) : (
+                      <>
+                      <Label className="text-white">Organization Name</Label>
+                        <Input
+                          type="text"
+                          name="organizationName"
+                          value={organizationName}
+                          onChange={(e) => setOrganizationName(e.target.value)}
+                          placeholder="Enter organization name"
+                          className="bg-gray-900 border-gray-800 text-white"
+                        />
+                        
+                      </>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-white">Website</Label>
-                    <Input 
-                      type="url" 
-                      placeholder="Enter organization website"
-                      className="bg-gray-900 border-gray-800 text-white"
-                    />
+                    {user?.role === 'organization' ? (
+                      <>
+                        <Label className="text-white">Username</Label>
+                        <Input
+                          type="text"
+                          name="username"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="Choose a username"
+                          className="bg-gray-900 border-gray-800 text-white"
+                        />
+                      </>
+                    ) : (
+                      <>
+                      <Label className="text-white">Website</Label>
+                        <Input
+                          type="url"
+                          name="website"
+                          value={website}
+                          onChange={(e) => setWebsite(e.target.value)}
+                          placeholder="Enter organization website"
+                          className="bg-gray-900 border-gray-800 text-white"
+                        />
+                        
+                      </>
+                    )}
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <Label className="text-white">Email</Label>
-                    <Input 
-                      type="email" 
-                      placeholder="Enter organization email"
-                      className="bg-gray-900 border-gray-800 text-white"
-                    />
+                    {user?.role === 'organization' ? (
+                      <>
+                        <Label className="text-white">Email</Label>
+                        <Input
+                          type="email"
+                          name="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="Enter your email"
+                          className="bg-gray-900 border-gray-800 text-white"
+                        />
+                      </>
+                    ) : (
+                      <>
+                      <Label className="text-white">Email</Label>
+                        <Input
+                          type="email"
+                          name="organizationEmail"
+                          value={organizationEmail}
+                          onChange={(e) => setOrganizationEmail(e.target.value)}
+                          placeholder="Enter organization email"
+                          className="bg-gray-900 border-gray-800 text-white"
+                        />
+                        
+                      </>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-white">Phone</Label>
-                    <Input 
-                      type="tel" 
-                      placeholder="Enter organization phone"
-                      className="bg-gray-900 border-gray-800 text-white"
-                    />
+                    {user?.role === 'organization' ? (
+                      <>
+                      <Label className="text-white">Phone</Label>
+                        <Input
+                          type="tel"
+                          name="phone"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="Enter your phone number"
+                          className="bg-gray-900 border-gray-800 text-white"
+                        />
+                        
+                      </>
+                    ) : (
+                      <>
+                        <Label className="text-white">Phone</Label>
+                        <Input
+                          type="tel"
+                          name="organizationPhone"
+                          value={organizationPhone}
+                          onChange={(e) => setOrganizationPhone(e.target.value)}
+                          placeholder="Enter organization phone"
+                          className="bg-gray-900 border-gray-800 text-white"
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
+                  
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-2">
+                    {user?.role === 'organization' ? (
+                      <>
+                        <Label className="text-white">Address</Label>
+                        <Input
+                          type="text"
+                          name="location"
+                          value={location}
+                          onChange={(e) => setLocation(e.target.value)}
+                          placeholder="Enter your location"
+                          className="bg-gray-900 border-gray-800 text-white"
+                        />
+                      </>
+                    ) : (
+                      <>
+                      <Label className="text-white">Address</Label>
+                        <Input
+                          type="text"
+                          name="organizationAddress"
+                          value={organizationAddress}
+                          onChange={(e) => setOrganizationAddress(e.target.value)}
+                          placeholder="Enter organization address"
+                          className="bg-gray-900 border-gray-800 text-white"
+                        />
+                        
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-white">Address</Label>
-                  <Input 
-                    type="text" 
-                    placeholder="Enter organization address"
-                    className="bg-gray-900 border-gray-800 text-white"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-white">Description</Label>
-                  <Textarea 
-                    placeholder="Tell us about your organization"
-                    className="bg-gray-900 border-gray-800 text-white resize-none"
-                    rows={4}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-white">Organization Logo</Label>
-                  <div className="flex items-center justify-center w-full">
-                    <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-800 border-dashed rounded-lg cursor-pointer bg-gray-900 hover:bg-gray-800">
-                      <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <ImageIcon className="w-8 h-8 mb-4 text-gray-400" />
-                        <p className="mb-2 text-sm text-gray-400">Click to upload or drag and drop</p>
-                        <p className="text-xs text-gray-400">PNG, JPG or JPEG</p>
-                      </div>
-                      <input type="file" className="hidden" />
-                    </label>
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-2">
+                    {user?.role === 'organization' ? (
+                      <>
+                        <Label className="text-white">Description</Label>
+                        <Textarea
+                          name="bio"
+                          value={bio}
+                          onChange={(e) => setBio(e.target.value)}
+                          placeholder="Tell us about yourself"
+                          className="bg-gray-900 border-gray-800 text-white resize-none"
+                          rows={4}
+                        />
+                      </>
+                    ) : (
+                      <>
+                      <Label className="text-white">Description</Label>
+                        <Textarea
+                          name="organizationDescription"
+                          value={organizationDescription}
+                          onChange={(e) => setOrganizationDescription(e.target.value)}
+                          placeholder="Tell us about your organization"
+                          className="bg-gray-900 border-gray-800 text-white resize-none"
+                          rows={4}
+                        />
+                        
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <Button 
-                  type="submit" 
+                <div className="grid grid-cols-1 gap-6">
+                  <div className="space-y-2">
+                    {user?.role === 'organization' ? (
+                      <>
+                        <Label className="text-white">Profile Picture</Label>
+                        <div className="flex items-center justify-center w-full">
+                          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-800 border-dashed rounded-lg cursor-pointer bg-gray-900 hover:bg-gray-800">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                              <ImageIcon className="w-8 h-8 mb-4 text-gray-400" />
+                              <p className="mb-2 text-sm text-gray-400">Click to upload or drag and drop</p>
+                              <p className="text-xs text-gray-400">PNG, JPG or JPEG</p>
+                            </div>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  setAvatarFile(file);
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                      <Label className="text-white">Organization Logo</Label>
+                        <div className="flex items-center justify-center w-full">
+                          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-800 border-dashed rounded-lg cursor-pointer bg-gray-900 hover:bg-gray-800">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                              <ImageIcon className="w-8 h-8 mb-4 text-gray-400" />
+                              <p className="mb-2 text-sm text-gray-400">Click to upload or drag and drop</p>
+                              <p className="text-xs text-gray-400">PNG, JPG or JPEG</p>
+                            </div>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  setOrganizationLogoFile(file);
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                        
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
                   className="w-full bg-red-500 hover:bg-red-600 text-white"
+                  disabled={isSubmitting}
+                  onClick={user?.role === 'organization' ? handleUserRegister : handleOrganizationRegister}
                 >
-                  Register as Organization
+                  {isSubmitting ? 'Registering...' : user?.role === 'organization' ? 'Register as User' : 'Register as Organization'}
                 </Button>
-              </form>
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>
